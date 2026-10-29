@@ -19,9 +19,9 @@ export function Home({ api, navigate }: { api: ProgressApi; navigate: Navigate }
     .sort((a, b) => (a.acc ?? 0) - (b.acc ?? 0))
 
   const passes: { p: Priority; label: string; note: string }[] = [
-    { p: 'high', label: 'Pass 1: High priority', note: 'Core topics your instructor built slides, drills, checklists or assignment samples for, plus the main Week 7 models.' },
-    { p: 'medium', label: 'Pass 2: Medium priority', note: 'The other Week 7 textbook learning objectives and the feature-writing chapters.' },
-    { p: 'low', label: 'Pass 3: Low priority', note: 'Side sections: communication technology, collaboration tools.' },
+    { p: 'high', label: 'Pass 1: High priority', note: 'Week 7 (most fill-in questions) + every lesson with highlighted lecture text (essay sources).' },
+    { p: 'medium', label: 'Pass 2: Medium priority', note: 'Weeks 1–6 core topics, mainly tested by multiple choice.' },
+    { p: 'low', label: 'Pass 3: Low priority', note: 'Week 7 side sections: communication technology, collaboration tools.' },
   ]
 
   const lastMock = progress.mocks[progress.mocks.length - 1]
@@ -49,6 +49,24 @@ export function Home({ api, navigate }: { api: ProgressApi; navigate: Navigate }
           </button>
         </div>
       </header>
+
+      <section className="rounded-xl border-2 border-indigo-200 bg-white p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-indigo-700">Your midterm format</h2>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg bg-indigo-50 p-3">
+            <div className="font-semibold text-indigo-950">1 · Multiple choice</div>
+            <div className="text-[13.5px] text-slate-700">Any week. Every lesson has multiple-choice practice.</div>
+          </div>
+          <div className="rounded-lg bg-emerald-50 p-3">
+            <div className="font-semibold text-emerald-950">2 · Fill in the blanks</div>
+            <div className="text-[13.5px] text-slate-700">Mostly Week 7. Know the exact terms; Week 7 lessons have extra fill-in practice.</div>
+          </div>
+          <a href="#/essays" className="rounded-lg bg-violet-50 p-3 hover:bg-violet-100">
+            <div className="font-semibold text-violet-950">3 · Essay →</div>
+            <div className="text-[13.5px] text-slate-700">From the highlighted texts in your lectures. See Essay prep for all 7 topics.</div>
+          </a>
+        </div>
+      </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">How every lesson works</h2>
@@ -88,7 +106,11 @@ export function Home({ api, navigate }: { api: ProgressApi; navigate: Navigate }
             )
           })}
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <a href="#/essays" className="rounded-xl border border-violet-200 bg-white p-4 hover:border-violet-400">
+            <div className="font-semibold text-slate-900">Then: Essay prep (≈ 40 min)</div>
+            <div className="text-[13px] text-slate-600">Write 2–3 practice essays on the highlighted topics and compare them with the model essays.</div>
+          </a>
           <a href="#/revision" className="rounded-xl border border-slate-200 bg-white p-4 hover:border-indigo-300">
             <div className="font-semibold text-slate-900">Then: Quick revision (≈ 20 min)</div>
             <div className="text-[13px] text-slate-600">Lists to memorize, key differences, definitions, visual cheat sheets, key examples.</div>
@@ -167,10 +189,10 @@ export function Home({ api, navigate }: { api: ProgressApi; navigate: Navigate }
         <h2 className="font-semibold text-slate-900">About your materials (read once)</h2>
         <ul className="mt-2 list-disc space-y-1.5 pl-5">
           <li>
-            <b>No syllabus was found</b> in your folder (only the Week 1–7 zip files). So the priorities are based on how your materials emphasize each topic: <b>{priorityLabel.high}</b> = instructor-made slides, drills, checklists and assignment samples (Weeks 1–6) plus the core communication and audience models that appear in both Week 7 textbooks; <b>{priorityLabel.medium}</b> = the other Week 7 learning objectives and feature-writing readings; <b>{priorityLabel.low}</b> = side sections.
+            Priorities follow <b>your midterm format</b>: <b>{priorityLabel.high}</b> = Week 7 (most fill-in questions) and the lessons with <b>highlighted text</b> in your lecture PDFs (essay sources: 6.2–6.4, 7.2, 7.5, 7.8.1, 7.10); <b>{priorityLabel.medium}</b> = Weeks 1–6 topics for multiple choice; <b>{priorityLabel.low}</b> = side sections.
           </li>
           <li>
-            <b>The midterm format isn't described</b> in your files, so the mock exam uses a mix of multiple-choice, true/false and short written answers. Check with your instructor about the real format.
+            The mock exam copies the format: Part 1 multiple choice, Part 2 fill in the blanks (80% Week 7), Part 3 one essay from a highlighted topic. The point split between parts isn't known.
           </li>
           <li>
             The Week 7 <b>videos</b> (meeting minutes, meeting notes, cultural differences, three on gaslighting) can't be read here. Their topics are taught from the matching textbook chapters and the gaslighting article. Watch them if you have time.

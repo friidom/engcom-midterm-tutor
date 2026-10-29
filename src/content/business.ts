@@ -23,7 +23,7 @@ export const businessLessons: LessonIn[] = [
     id: 'comm-basics',
     unit: 'business',
     title: 'What communication is & why it matters',
-    priority: 'medium',
+    priority: 'high',
     minutes: 8,
     sources: ['7.1 Bovée & Thill, Ch. 1 "Professional Communication in a Digital, Social, Mobile World" (LO 1)'],
     what:
@@ -394,7 +394,7 @@ export const businessLessons: LessonIn[] = [
     id: 'professionalism',
     unit: 'business',
     title: 'Professionalism, networks & the "you" attitude',
-    priority: 'medium',
+    priority: 'high',
     minutes: 10,
     sources: ['7.1 Bovée & Thill Ch. 1 (LO 2, Figs 1.2–1.4)', '7.8.2 Ineffective vs Effective Professional Communication'],
     what:
@@ -542,7 +542,7 @@ export const businessLessons: LessonIn[] = [
     id: 'ethics',
     unit: 'business',
     title: 'Ethical & legal communication',
-    priority: 'medium',
+    priority: 'high',
     minutes: 10,
     sources: ['7.1 Bovée & Thill Ch. 1 (LO 5, Figs 1.9–1.10)', '7.2 Sample: Apple Business Conduct Policy'],
     what:
@@ -557,6 +557,7 @@ export const businessLessons: LessonIn[] = [
       'Tell an **ethical dilemma** (choice between alternatives that aren\'t clear-cut; both may be valid) from an **ethical lapse** (a clearly unethical choice).',
       'Ask the **five questions**: honorable intention? all the information they need? effect on everyone affected? respecting legal and moral rights of others? could a different approach be better? Then: could you comfortably explain your choice to someone whose opinion you value?',
       'Companies support ethics with a **code of ethics** (a written policy), training, and channels like ethics hotlines. Managers must model ethical behavior.',
+      '**Highlighted in Apple\'s policy (7.2, pp. 17–18):** a **bribe** is offering or giving **anything of value** (cash, gift cards, gifts, meals, travel, entertainment) to obtain or keep business or gain an **improper advantage**, with public officials **or** private parties. A **kickback** is a type of bribery: something of value in exchange for giving **information, a discount or a favor to a third party**. **Facilitating payments** are bribes to **speed up routine government action**. **Money laundering** = trying to **conceal illicit funds** or make them look legitimate.',
       'Legal areas: promotional communication (no false advertising, bait-and-switch), **contracts**, employee communication, **intellectual property**, financial reporting, **defamation** (libel/slander), transparency requirements (influencers must disclose relationships).',
     ],
     example: {
@@ -584,6 +585,7 @@ export const businessLessons: LessonIn[] = [
       '**Dilemma** = not clear-cut (both may be valid); **lapse** = clearly unethical.',
       '**Transparency** = openness, giving everyone the information they need to process messages accurately.',
       'Apple\'s principles: **Honesty, Respect, Confidentiality, Compliance**.',
+      'Essay source: the four **bribery & corruption** terms are highlighted in your copy of Apple\'s policy. Know a definition and an example of each.',
     ],
     confusions: [
       '**Native advertising** (sponsored content that looks like news; must be labeled) vs **stealth marketing** (promoting without revealing it\'s marketing).',

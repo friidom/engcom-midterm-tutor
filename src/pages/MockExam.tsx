@@ -1,12 +1,33 @@
 import { useEffect, useMemo, useState } from 'react'
 import { lessonById } from '../content'
-import { mockQuestions, type MockQuestion } from '../content/mock'
+import { mockQuestions } from '../content/mock'
+import { mockFillBank } from '../content/fills'
+import { essayTopics } from '../content/essays'
 import type { ProgressApi } from '../progress'
 import type { Navigate } from '../App'
-import { KeyPointsReview, questionLabel } from '../components/QuestionCard'
+import type { Question } from '../types'
+import { FillAnswers, FillSentence, KeyPointsReview, fillScore } from '../components/QuestionCard'
 import { Inline, Rich } from '../components/Rich'
 
-type Answer = number | boolean | string
+type Part = 1 | 2 | 3
+type Answer = number | string | string[]
+
+interface Item {
+  part: Part
+  lesson: string
+  question: Question
+}
+
+const partInfo: Record<Part, { title: string; note: string; tone: string }> = {
+  1: { title: 'Part 1 · Multiple choice', note: 'All weeks', tone: 'text-indigo-700' },
+  2: { title: 'Part 2 · Fill in the blanks', note: 'Mostly Week 7', tone: 'text-emerald-700' },
+  3: { title: 'Part 3 · Essay', note: 'From the highlighted lecture texts', tone: 'text-violet-700' },
+}
+
+const sizes = {
+  quick: { mcq: 15, fill: 10, minutes: 35, label: 'Quick mock' },
+  full: { mcq: 30, fill: 20, minutes: 60, label: 'Full mock' },
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -17,35 +38,49 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-function autoScore(m: MockQuestion, a: Answer | undefined): number | null {
-  const q = m.question
-  if (q.kind === 'short') return null
-  if (a === undefined) return 0
-  return a === q.answer ? 1 : 0
+function buildExam(size: keyof typeof sizes): Item[] {
+  const s = sizes[size]
+  const mcqs = shuffle(mockQuestions.filter((m) => m.question.kind === 'mcq')).slice(0, s.mcq)
+  const w7Count = Math.round(s.fill * 0.8)
+  const fills = [
+    ...shuffle(mockFillBank.filter((x) => x.week7)).slice(0, w7Count),
+    ...shuffle(mockFillBank.filter((x) => !x.week7)).slice(0, s.fill - w7Count),
+  ]
+  const essay = shuffle(essayTopics)[0]
+  return [
+    ...mcqs.map((m) => ({ part: 1 as Part, lesson: m.lesson, question: m.question })),
+    ...shuffle(fills).map((x, i) => ({ part: 2 as Part, lesson: x.lesson, question: { ...x.question, id: `mockfill-${x.lesson}-${i}` } as Question })),
+    { part: 3 as Part, lesson: essay.lesson, question: essay.question },
+  ]
 }
 
-function answerText(m: MockQuestion, a: Answer | undefined) {
-  const q = m.question
-  if (a === undefined || a === '') return '(no answer)'
-  if (q.kind === 'mcq') return `${String.fromCharCode(65 + (a as number))}. ${q.options[a as number]}`
-  if (q.kind === 'tf') return a ? 'True' : 'False'
-  return String(a)
+function autoScore(it: Item, a: Answer | undefined): number | null {
+  const q = it.question
+  if (q.kind === 'mcq') return a === q.answer ? 1 : 0
+  if (q.kind === 'fill') return fillScore(q, (a as string[]) ?? [])
+  return null
+}
+
+function isAnswered(it: Item, a: Answer | undefined) {
+  if (a === undefined) return false
+  if (Array.isArray(a)) return a.some((x) => x.trim())
+  if (typeof a === 'string') return a.trim().length > 0
+  return it.question.kind === 'mcq'
 }
 
 export function MockExam({ api, navigate }: { api: ProgressApi; navigate: Navigate }) {
   const { recordAnswer, recordMock } = api
   const [phase, setPhase] = useState<'intro' | 'exam' | 'results'>('intro')
-  const [set, setSet] = useState<MockQuestion[]>([])
+  const [items, setItems] = useState<Item[]>([])
   const [index, setIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, Answer>>({})
-  const [grades, setGrades] = useState<Record<string, number>>({})
+  const [answers, setAnswers] = useState<Record<number, Answer>>({})
+  const [essayGrade, setEssayGrade] = useState<number | null>(null)
   const [saved, setSaved] = useState(false)
 
-  const start = (size: number | 'all') => {
-    const shuffled = shuffle(mockQuestions)
-    setSet(size === 'all' ? shuffled : shuffled.slice(0, size))
+  const start = (size: keyof typeof sizes) => {
+    setItems(buildExam(size))
     setAnswers({})
-    setGrades({})
+    setEssayGrade(null)
     setIndex(0)
     setSaved(false)
     setPhase('exam')
@@ -53,162 +88,173 @@ export function MockExam({ api, navigate }: { api: ProgressApi; navigate: Naviga
   }
 
   const submit = () => {
-    const unanswered = set.filter((m) => answers[m.question.id] === undefined || answers[m.question.id] === '').length
+    const unanswered = items.filter((it, i) => !isAnswered(it, answers[i])).length
     if (unanswered > 0 && !window.confirm(`${unanswered} question(s) are unanswered. Submit anyway?`)) return
-    set.forEach((m) => {
-      const s = autoScore(m, answers[m.question.id])
-      if (s !== null) recordAnswer(m.question.id, m.lesson, s)
+    items.forEach((it, i) => {
+      const s = autoScore(it, answers[i])
+      if (s !== null) recordAnswer(it.question.id, it.lesson, s)
     })
     setPhase('results')
     window.scrollTo({ top: 0 })
   }
 
-  const grade = (m: MockQuestion, s: number) => {
-    setGrades((g) => ({ ...g, [m.question.id]: s }))
-    recordAnswer(m.question.id, m.lesson, s)
+  const scores = useMemo(() => items.map((it, i) => (it.part === 3 ? essayGrade : autoScore(it, answers[i]))), [items, answers, essayGrade])
+
+  const partScore = (p: Part) => {
+    const idx = items.map((it, i) => (it.part === p ? i : -1)).filter((i) => i >= 0)
+    const graded = idx.filter((i) => scores[i] !== null)
+    const earned = graded.reduce((s, i) => s + (scores[i] ?? 0), 0)
+    return { n: idx.length, earned, pct: idx.length && graded.length === idx.length ? Math.round((earned / idx.length) * 100) : null }
   }
 
-  const scores = useMemo(() => {
-    const per: Record<string, number | null> = {}
-    set.forEach((m) => {
-      const auto = autoScore(m, answers[m.question.id])
-      per[m.question.id] = auto !== null ? auto : (grades[m.question.id] ?? null)
-    })
-    return per
-  }, [set, answers, grades])
-
-  const ungraded = set.filter((m) => scores[m.question.id] === null).length
-  const earned = set.reduce((s, m) => s + (scores[m.question.id] ?? 0), 0)
-  const percent = set.length ? Math.round((earned / set.length) * 100) : 0
+  const p1 = partScore(1)
+  const p2 = partScore(2)
+  const p3 = partScore(3)
+  const overall = p1.pct !== null && p2.pct !== null && p3.pct !== null ? Math.round((p1.pct + p2.pct + p3.pct) / 3) : null
 
   const byLesson = useMemo(() => {
     const map: Record<string, { sum: number; n: number }> = {}
-    set.forEach((m) => {
-      const s = scores[m.question.id]
+    items.forEach((it, i) => {
+      const s = scores[i]
       if (s === null) return
-      map[m.lesson] ??= { sum: 0, n: 0 }
-      map[m.lesson].sum += s
-      map[m.lesson].n += 1
+      map[it.lesson] ??= { sum: 0, n: 0 }
+      map[it.lesson].sum += s
+      map[it.lesson].n += 1
     })
     return Object.entries(map)
-      .map(([lesson, v]) => ({ lesson, acc: v.sum / v.n, n: v.n }))
+      .map(([lesson, v]) => ({ lesson, acc: v.sum / v.n }))
       .sort((a, b) => a.acc - b.acc)
-  }, [set, scores])
+  }, [items, scores])
 
   const weak = byLesson.filter((r) => r.acc < 0.7).map((r) => r.lesson)
 
   useEffect(() => {
-    if (phase === 'results' && ungraded === 0 && !saved && set.length > 0) {
-      recordMock({ at: Date.now(), percent, weak })
+    if (phase === 'results' && overall !== null && !saved) {
+      recordMock({ at: Date.now(), percent: overall, weak })
       setSaved(true)
     }
-  }, [phase, ungraded, saved, set.length, percent, weak, recordMock])
+  }, [phase, overall, saved, weak, recordMock])
 
   if (phase === 'intro') {
-    const counts = { mcq: 0, tf: 0, short: 0 }
-    mockQuestions.forEach((m) => counts[m.question.kind]++)
     return (
       <div className="space-y-6">
         <header>
           <div className="text-sm font-semibold uppercase tracking-wide text-indigo-600">Final check</div>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Mock midterm</h1>
+          <p className="mt-2 text-[15.5px] text-slate-600">Built on your real midterm format. No feedback until you submit, like the real exam.</p>
         </header>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-[15px] text-amber-950">
-          <b>About the format:</b> your files don't describe the real midterm format, so this mock mixes the question types used in your course materials: {counts.mcq} multiple-choice, {counts.tf} true/false and {counts.short} short written answers, covering every lesson (more questions on High-priority topics). You won't see feedback until you submit, like a real exam.
+        <div className="grid gap-3 md:grid-cols-3">
+          {([1, 2, 3] as Part[]).map((p) => (
+            <div key={p} className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className={`font-semibold ${partInfo[p].tone}`}>{partInfo[p].title}</div>
+              <div className="text-[13.5px] text-slate-600">{partInfo[p].note}</div>
+            </div>
+          ))}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <button type="button" onClick={() => start(25)} className="rounded-xl border border-slate-200 bg-white p-5 text-left hover:border-indigo-400">
-            <div className="text-lg font-semibold text-slate-900">Quick mock</div>
-            <div className="text-[14px] text-slate-600">25 random questions · about 20 minutes</div>
-          </button>
-          <button type="button" onClick={() => start('all')} className="rounded-xl border border-slate-200 bg-white p-5 text-left hover:border-indigo-400">
-            <div className="text-lg font-semibold text-slate-900">Full mock</div>
-            <div className="text-[14px] text-slate-600">All {mockQuestions.length} questions · about 45 minutes</div>
-          </button>
+          {(Object.keys(sizes) as (keyof typeof sizes)[]).map((k) => (
+            <button key={k} type="button" onClick={() => start(k)} className="rounded-xl border border-slate-200 bg-white p-5 text-left hover:border-indigo-400">
+              <div className="text-lg font-semibold text-slate-900">{sizes[k].label}</div>
+              <div className="text-[14px] text-slate-600">
+                {sizes[k].mcq} multiple choice · {sizes[k].fill} fill-in (80% Week 7) · 1 essay · about {sizes[k].minutes} min
+              </div>
+            </button>
+          ))}
         </div>
+        <p className="text-[13px] text-slate-500">The point split between the three parts isn't known, so the overall score is the average of the three part scores.</p>
       </div>
     )
   }
 
   if (phase === 'exam') {
-    const m = set[index]
-    const q = m.question
-    const a = answers[q.id]
-    const setA = (v: Answer) => setAnswers((prev) => ({ ...prev, [q.id]: v }))
-    const answeredCount = set.filter((x) => answers[x.question.id] !== undefined && answers[x.question.id] !== '').length
+    const it = items[index]
+    const q = it.question
+    const a = answers[index]
+    const setA = (v: Answer) => setAnswers((prev) => ({ ...prev, [index]: v }))
+    const answeredCount = items.filter((x, i) => isAnswered(x, answers[i])).length
     return (
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-xl font-bold text-slate-900">
-            Mock midterm · Question {index + 1} of {set.length}
+            Mock midterm · {index + 1} of {items.length}
           </h1>
           <span className="text-sm text-slate-500">{answeredCount} answered</span>
         </div>
-        <div className="flex flex-wrap gap-1">
-          {set.map((x, i) => {
-            const has = answers[x.question.id] !== undefined && answers[x.question.id] !== ''
-            return (
-              <button
-                key={x.question.id}
-                type="button"
-                onClick={() => setIndex(i)}
-                className={`h-7 w-7 rounded text-[12px] font-semibold ${i === index ? 'bg-indigo-600 text-white' : has ? 'bg-indigo-100 text-indigo-900' : 'bg-slate-200 text-slate-600'}`}
-                aria-label={`Go to question ${i + 1}`}
-              >
-                {i + 1}
-              </button>
-            )
-          })}
+        <div className="space-y-1.5">
+          {([1, 2, 3] as Part[]).map((p) => (
+            <div key={p} className="flex flex-wrap items-center gap-1">
+              <span className={`mr-1 w-16 text-[11px] font-semibold uppercase ${partInfo[p].tone}`}>Part {p}</span>
+              {items.map((x, i) =>
+                x.part === p ? (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setIndex(i)}
+                    className={`h-7 min-w-7 rounded px-1 text-[12px] font-semibold ${i === index ? 'bg-indigo-600 text-white' : isAnswered(x, answers[i]) ? 'bg-indigo-100 text-indigo-900' : 'bg-slate-200 text-slate-600'}`}
+                    aria-label={`Go to question ${i + 1}`}
+                  >
+                    {p === 3 ? 'Essay' : i + 1}
+                  </button>
+                ) : null,
+              )}
+            </div>
+          ))}
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-indigo-600">{questionLabel(q)}</div>
-          {q.scenario && (
-            <div className="mb-3 rounded-lg border-l-4 border-indigo-300 bg-indigo-50/60 px-4 py-3 text-[15px] text-slate-700">
-              <Rich text={q.scenario} />
-            </div>
-          )}
-          <div className="mb-4 text-[16px] font-medium text-slate-900">
-            <Rich text={q.prompt} />
-          </div>
+          <div className={`mb-2 text-xs font-semibold uppercase tracking-wide ${partInfo[it.part].tone}`}>{partInfo[it.part].title}</div>
           {q.kind === 'mcq' && (
-            <div className="space-y-2">
-              {q.options.map((opt, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setA(i)}
-                  className={`flex w-full items-start gap-3 rounded-lg border px-4 py-2.5 text-left text-[15px] ${a === i ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500' : 'border-slate-200 hover:bg-slate-50'}`}
-                >
-                  <span className="font-semibold text-slate-500">{String.fromCharCode(65 + i)}</span>
-                  <span>
-                    <Inline text={opt} />
-                  </span>
-                </button>
-              ))}
-            </div>
+            <>
+              {q.scenario && (
+                <div className="mb-3 rounded-lg border-l-4 border-indigo-300 bg-indigo-50/60 px-4 py-3 text-[15px] text-slate-700">
+                  <Rich text={q.scenario} />
+                </div>
+              )}
+              <div className="mb-4 text-[16px] font-medium text-slate-900">
+                <Rich text={q.prompt} />
+              </div>
+              <div className="space-y-2">
+                {q.options.map((opt, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setA(i)}
+                    className={`flex w-full items-start gap-3 rounded-lg border px-4 py-2.5 text-left text-[15px] ${a === i ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500' : 'border-slate-200 hover:bg-slate-50'}`}
+                  >
+                    <span className="font-semibold text-slate-500">{String.fromCharCode(65 + i)}</span>
+                    <span>
+                      <Inline text={opt} />
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
-          {q.kind === 'tf' && (
-            <div className="flex gap-3">
-              {[true, false].map((v) => (
-                <button
-                  key={String(v)}
-                  type="button"
-                  onClick={() => setA(v)}
-                  className={`flex-1 rounded-lg border px-4 py-2.5 font-semibold ${a === v ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500' : 'border-slate-200 hover:bg-slate-50'}`}
-                >
-                  {v ? 'True' : 'False'}
-                </button>
-              ))}
-            </div>
+          {q.kind === 'fill' && (
+            <FillSentence
+              key={index}
+              q={q}
+              inputs={(a as string[]) ?? q.blanks.map(() => '')}
+              checked={false}
+              onChange={(i, v) => {
+                const cur = ((a as string[]) ?? q.blanks.map(() => '')).slice()
+                cur[i] = v
+                setA(cur)
+              }}
+            />
           )}
           {q.kind === 'short' && (
-            <textarea
-              value={(a as string) ?? ''}
-              onChange={(e) => setA(e.target.value)}
-              rows={5}
-              placeholder="Write your answer…"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-[15px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
+            <>
+              <div className="mb-3 text-[16px] font-medium text-slate-900">
+                <Rich text={q.prompt} />
+              </div>
+              <textarea
+                value={(a as string) ?? ''}
+                onChange={(e) => setA(e.target.value)}
+                rows={14}
+                placeholder="Introduction → 2–3 body paragraphs with examples → conclusion"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-[15px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </>
           )}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -216,12 +262,12 @@ export function MockExam({ api, navigate }: { api: ProgressApi; navigate: Naviga
             ← Previous
           </button>
           <div className="flex gap-2">
-            {index < set.length - 1 && (
+            {index < items.length - 1 && (
               <button type="button" onClick={() => setIndex((i) => i + 1)} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
                 Next →
               </button>
             )}
-            <button type="button" onClick={submit} className={`rounded-lg px-4 py-2 text-sm font-semibold ${index === set.length - 1 ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'border border-emerald-600 text-emerald-700 hover:bg-emerald-50'}`}>
+            <button type="button" onClick={submit} className={`rounded-lg px-4 py-2 text-sm font-semibold ${index === items.length - 1 ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'border border-emerald-600 text-emerald-700 hover:bg-emerald-50'}`}>
               Submit exam
             </button>
           </div>
@@ -230,25 +276,70 @@ export function MockExam({ api, navigate }: { api: ProgressApi; navigate: Naviga
     )
   }
 
+  const essayIndex = items.findIndex((x) => x.part === 3)
+  const essayItem = items[essayIndex]
+  const fmt = (x: number) => (x % 1 === 0 ? x : x.toFixed(1))
+
   return (
     <div className="space-y-6">
       <header>
         <div className="text-sm font-semibold uppercase tracking-wide text-indigo-600">Results</div>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
-          {ungraded > 0 ? `So far: ${percent}%` : `Final score: ${percent}%`}
-        </h1>
-        <p className="mt-1 text-slate-600">
-          {earned % 1 === 0 ? earned : earned.toFixed(1)} of {set.length} points.{' '}
-          {ungraded > 0 && <b className="text-amber-700">Self-grade the {ungraded} written answer(s) below to get your final score.</b>}
-        </p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{overall !== null ? `Overall: ${overall}%` : 'Grade your essay to see your overall score'}</h1>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {[
+            { p: 1 as Part, s: p1 },
+            { p: 2 as Part, s: p2 },
+            { p: 3 as Part, s: p3 },
+          ].map(({ p, s }) => (
+            <div key={p} className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+              <div className={`text-[13px] font-semibold ${partInfo[p].tone}`}>{partInfo[p].title}</div>
+              <div className="text-xl font-bold text-slate-900">{s.pct !== null ? `${s.pct}%` : 'not graded'}</div>
+              <div className="text-[12.5px] text-slate-500">
+                {fmt(s.earned)} / {s.n} {p === 3 ? 'self-graded' : 'points'}
+              </div>
+            </div>
+          ))}
+        </div>
       </header>
+
+      {essayItem && essayItem.question.kind === 'short' && (
+        <section className="rounded-xl border-2 border-violet-300 bg-white p-5">
+          <h2 className="font-bold text-violet-900">Part 3 · Grade your essay</h2>
+          <div className="mt-1 font-medium text-slate-900">
+            <Rich text={essayItem.question.prompt} />
+          </div>
+          <div className="mt-3 space-y-3 text-[14.5px]">
+            <div className="whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2 text-slate-700">{(answers[essayIndex] as string) || '(no answer)'}</div>
+            <KeyPointsReview q={essayItem.question} answer={(answers[essayIndex] as string) ?? ''} />
+            <div className="flex flex-wrap gap-2">
+              {[
+                { v: 1, label: 'Covered all key points, clearly organized' },
+                { v: 0.5, label: 'Covered some' },
+                { v: 0, label: 'Missed most' },
+              ].map((o) => (
+                <button
+                  key={o.v}
+                  type="button"
+                  onClick={() => {
+                    setEssayGrade(o.v)
+                    recordAnswer(essayItem.question.id, essayItem.lesson, o.v)
+                  }}
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${essayGrade === o.v ? 'border-violet-500 bg-violet-50 text-violet-800' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="font-bold text-slate-900">Score by topic</h2>
         <div className="mt-3 space-y-1.5">
           {byLesson.map((r) => (
             <a key={r.lesson} href={`#/lesson/${r.lesson}`} className="flex items-center gap-3 text-[14px] hover:underline">
-              <span className="w-56 shrink-0 truncate text-slate-800 sm:w-72">{lessonById[r.lesson]?.title}</span>
+              <span className="w-48 shrink-0 truncate text-slate-800 sm:w-72">{lessonById[r.lesson]?.title}</span>
               <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
                 <span className={`block h-full rounded-full ${r.acc < 0.7 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${Math.max(4, r.acc * 100)}%` }} />
               </span>
@@ -256,59 +347,50 @@ export function MockExam({ api, navigate }: { api: ProgressApi; navigate: Naviga
             </a>
           ))}
         </div>
-        {weak.length > 0 ? (
-          <div className="mt-4 rounded-lg bg-rose-50 p-4">
-            <div className="font-semibold text-rose-900">Weak topics (below 70%): {weak.length}</div>
-            <p className="mt-1 text-[14px] text-rose-950">Reread these lessons, then do the targeted practice. It uses each lesson's practice questions, with similar follow-ups after mistakes.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => navigate(`/practice?lessons=${weak.join(',')}`)} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">
-                Practice my weak topics →
-              </button>
-              <button type="button" onClick={() => setPhase('intro')} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">
-                Retake a mock
-              </button>
-            </div>
-          </div>
-        ) : (
-          ungraded === 0 && (
-            <div className="mt-4 rounded-lg bg-emerald-50 p-4 text-emerald-900">
-              No weak topics, nice work. <button type="button" onClick={() => setPhase('intro')} className="underline">Retake a different mix</button>
-            </div>
-          )
-        )}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {weak.length > 0 && (
+            <button type="button" onClick={() => navigate(`/practice?lessons=${weak.join(',')}`)} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">
+              Practice my {weak.length} weak topic{weak.length > 1 ? 's' : ''} →
+            </button>
+          )}
+          <button type="button" onClick={() => setPhase('intro')} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">
+            Retake a new mock
+          </button>
+          <a href="#/essays" className="rounded-lg border border-violet-300 px-4 py-2 text-sm font-medium text-violet-700 hover:bg-violet-50">
+            Practice the other essay topics
+          </a>
+        </div>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xl font-bold text-slate-900">Review every question</h2>
-        {set.map((m, i) => {
-          const q = m.question
-          const s = scores[q.id]
-          const a = answers[q.id]
-          const border = s === null ? 'border-amber-300' : s >= 1 ? 'border-emerald-300' : s > 0 ? 'border-amber-300' : 'border-rose-300'
+        <h2 className="text-xl font-bold text-slate-900">Review Parts 1 and 2</h2>
+        {items.map((it, i) => {
+          if (it.part === 3) return null
+          const q = it.question
+          const s = scores[i] ?? 0
+          const border = s >= 1 ? 'border-emerald-300' : s > 0 ? 'border-amber-300' : 'border-rose-300'
           return (
-            <div key={q.id} className={`rounded-xl border-2 bg-white p-4 ${border}`}>
+            <div key={i} className={`rounded-xl border-2 bg-white p-4 ${border}`}>
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
                 <span>
-                  Q{i + 1} · {questionLabel(q)} · {lessonById[m.lesson]?.title}
+                  Q{i + 1} · {partInfo[it.part].title} · {lessonById[it.lesson]?.title}
                 </span>
-                <span className="font-semibold">{s === null ? 'Needs self-grade' : s >= 1 ? 'Correct' : s > 0 ? 'Partly' : 'Wrong'}</span>
+                <span className="font-semibold">{s >= 1 ? 'Correct' : s > 0 ? 'Partly' : 'Wrong'}</span>
               </div>
-              <div className="mt-1 font-medium text-slate-900">
-                <Rich text={q.prompt} />
-              </div>
-              {q.kind !== 'short' ? (
-                <div className="mt-2 space-y-1 text-[14.5px]">
+              {q.kind === 'mcq' && (
+                <div className="mt-1 space-y-1 text-[14.5px]">
+                  <div className="font-medium text-slate-900">
+                    <Rich text={q.prompt} />
+                  </div>
                   <div>
                     <span className="text-slate-500">Your answer: </span>
-                    <span className={s === 1 ? 'text-emerald-800' : 'text-rose-800'}>
-                      <Inline text={answerText(m, a)} />
-                    </span>
+                    <span className={s === 1 ? 'text-emerald-800' : 'text-rose-800'}>{answers[i] === undefined ? '(no answer)' : <Inline text={q.options[answers[i] as number]} />}</span>
                   </div>
                   {s !== 1 && (
                     <div>
                       <span className="text-slate-500">Correct: </span>
                       <span className="text-emerald-800">
-                        <Inline text={answerText(m, q.answer)} />
+                        <Inline text={q.options[q.answer]} />
                       </span>
                     </div>
                   )}
@@ -316,28 +398,13 @@ export function MockExam({ api, navigate }: { api: ProgressApi; navigate: Naviga
                     <Rich text={q.explain} />
                   </div>
                 </div>
-              ) : (
-                <div className="mt-2 space-y-3 text-[14.5px]">
+              )}
+              {q.kind === 'fill' && (
+                <div className="mt-2 space-y-2 text-[14.5px]">
+                  <FillSentence q={q} inputs={(answers[i] as string[]) ?? []} checked />
+                  <FillAnswers q={q} inputs={(answers[i] as string[]) ?? []} />
                   <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-700">
-                    <span className="text-slate-500">Your answer: </span>
-                    {answerText(m, a)}
-                  </div>
-                  <KeyPointsReview q={q} answer={typeof a === 'string' ? a : ''} />
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { v: 1, label: 'Covered all key points' },
-                      { v: 0.5, label: 'Covered some' },
-                      { v: 0, label: 'Missed most' },
-                    ].map((o) => (
-                      <button
-                        key={o.v}
-                        type="button"
-                        onClick={() => grade(m, o.v)}
-                        className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${grades[q.id] === o.v ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}`}
-                      >
-                        {o.label}
-                      </button>
-                    ))}
+                    <Rich text={q.explain} />
                   </div>
                 </div>
               )}
@@ -345,6 +412,7 @@ export function MockExam({ api, navigate }: { api: ProgressApi; navigate: Naviga
           )
         })}
       </section>
+
     </div>
   )
 }

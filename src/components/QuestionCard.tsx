@@ -1,14 +1,51 @@
 import { useState } from 'react'
-import type { KeyPoint, Question, ShortAnswer } from '../types'
+import type { FillIn, KeyPoint, Question, ShortAnswer } from '../types'
 import { Inline, Rich } from './Rich'
 
 const kindLabel: Record<string, string> = {
   mcq: 'Multiple choice',
   tf: 'True or false',
   short: 'Short answer',
+  fill: 'Fill in the blank',
+}
+
+function normalize(s: string) {
+  return s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9%$ ]/g, ' ')
+    .replace(/\b(a|an|the)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function editDistance(a: string, b: string) {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)])
+  for (let j = 1; j <= b.length; j++) dp[0][j] = j
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+  return dp[a.length][b.length]
+}
+
+// Small spelling slips are accepted so the check tests knowledge of the term, not typing.
+export function checkBlank(input: string, accepted: string[]) {
+  const given = normalize(input)
+  if (!given) return false
+  return accepted.some((a) => {
+    const want = normalize(a)
+    if (given === want) return true
+    const allowed = want.length >= 10 ? 2 : want.length >= 5 ? 1 : 0
+    return editDistance(given, want) <= allowed
+  })
+}
+
+export function fillScore(q: FillIn, inputs: string[]) {
+  return q.blanks.filter((acc, i) => checkBlank(inputs[i] ?? '', acc)).length / q.blanks.length
 }
 
 export function questionLabel(q: Question) {
+  if (q.kind === 'short' && q.essay) return 'Essay question'
   if (q.kind === 'short' && q.ownWords) return 'Explain in your own words'
   if (q.scenario) return 'Practical scenario'
   return kindLabel[q.kind]
@@ -31,12 +68,93 @@ export function QuestionCard({ question, onDone, tone = 'default' }: { question:
           <Rich text={question.scenario} />
         </div>
       )}
-      <div className="mb-4 text-[16px] font-medium leading-relaxed text-slate-900">
-        <Rich text={question.prompt} />
-      </div>
+      {question.kind !== 'fill' && (
+        <div className="mb-4 text-[16px] font-medium leading-relaxed text-slate-900">
+          <Rich text={question.prompt} />
+        </div>
+      )}
       {question.kind === 'mcq' && <McqBody q={question} onDone={onDone} />}
       {question.kind === 'tf' && <TfBody q={question} onDone={onDone} />}
       {question.kind === 'short' && <ShortBody q={question} onDone={onDone} />}
+      {question.kind === 'fill' && <FillBody q={question} onDone={onDone} />}
+    </div>
+  )
+}
+
+export function FillSentence({ q, inputs, onChange, checked }: { q: FillIn; inputs: string[]; onChange?: (i: number, v: string) => void; checked: boolean }) {
+  const parts = q.prompt.split('___')
+  return (
+    <div className="text-[16px] leading-[2.4] text-slate-900">
+      {parts.map((part, i) => {
+        const ok = checked && checkBlank(inputs[i] ?? '', q.blanks[i] ?? [])
+        return (
+          <span key={i}>
+            <Inline text={part} />
+            {i < parts.length - 1 && (
+              <input
+                value={inputs[i] ?? ''}
+                onChange={(e) => onChange?.(i, e.target.value)}
+                disabled={checked || !onChange}
+                aria-label={`Blank ${i + 1}`}
+                className={`mx-1 inline-block w-44 rounded-md border-b-2 px-2 py-0.5 text-center text-[15px] font-semibold focus:outline-none ${
+                  !checked ? 'border-indigo-400 bg-indigo-50/60 focus:bg-indigo-50' : ok ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-rose-400 bg-rose-50 text-rose-900'
+                }`}
+              />
+            )}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+export function FillAnswers({ q, inputs }: { q: FillIn; inputs: string[] }) {
+  return (
+    <ul className="space-y-1 text-[14.5px]">
+      {q.blanks.map((acc, i) => {
+        const ok = checkBlank(inputs[i] ?? '', acc)
+        return (
+          <li key={i}>
+            <span className={ok ? 'text-emerald-700' : 'text-rose-700'}>{ok ? '✓' : '✗'}</span> Blank {i + 1}: <b>{acc[0]}</b>
+            {!ok && inputs[i] && <span className="text-slate-500"> (you wrote "{inputs[i]}")</span>}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function FillBody({ q, onDone }: { q: FillIn; onDone: (s: number) => void }) {
+  const [inputs, setInputs] = useState<string[]>(() => q.blanks.map(() => ''))
+  const [checked, setChecked] = useState(false)
+  const score = fillScore(q, inputs)
+
+  const check = () => {
+    setChecked(true)
+    onDone(score)
+  }
+
+  return (
+    <div>
+      <FillSentence q={q} inputs={inputs} checked={checked} onChange={(i, v) => setInputs((prev) => prev.map((x, j) => (j === i ? v : x)))} />
+      {!checked ? (
+        <button
+          type="button"
+          onClick={check}
+          disabled={inputs.every((x) => !x.trim())}
+          className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          Check answer
+        </button>
+      ) : (
+        <div className={`mt-4 rounded-lg px-4 py-3 text-[15px] ${score === 1 ? 'bg-emerald-50 text-emerald-900' : 'bg-rose-50 text-rose-900'}`}>
+          <div className="mb-1 font-semibold">{score === 1 ? 'Correct.' : score > 0 ? 'Partly right.' : 'Not quite.'}</div>
+          <FillAnswers q={q} inputs={inputs} />
+          <div className="mt-2">
+            <Rich text={q.explain} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -148,8 +266,9 @@ function TfBody({ q, onDone }: { q: Extract<Question, { kind: 'tf' }>; onDone: (
 export function KeyPointsReview({ q, answer }: { q: ShortAnswer; answer: string }) {
   return (
     <div className="space-y-3">
+      {q.plan && <EssayPlan plan={q.plan} />}
       <div>
-        <div className="mb-2 text-sm font-semibold text-slate-800">A good answer includes:</div>
+        <div className="mb-2 text-sm font-semibold text-slate-800">{q.essay ? 'A strong essay covers:' : 'A good answer includes:'}</div>
         <ul className="space-y-1.5">
           {q.keyPoints.map((kp, i) => {
             const covered = answer.trim().length > 0 && hintCovered(answer, kp)
@@ -181,10 +300,26 @@ export function KeyPointsReview({ q, answer }: { q: ShortAnswer; answer: string 
   )
 }
 
+export function EssayPlan({ plan }: { plan: string[] }) {
+  return (
+    <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3">
+      <div className="mb-1 text-sm font-semibold text-violet-900">Suggested essay plan</div>
+      <ol className="list-decimal space-y-1 pl-5 text-[14.5px] text-slate-800">
+        {plan.map((p, i) => (
+          <li key={i}>
+            <Inline text={p} />
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
 function ShortBody({ q, onDone }: { q: ShortAnswer; onDone: (s: number) => void }) {
   const [text, setText] = useState('')
   const [revealed, setRevealed] = useState(false)
   const [graded, setGraded] = useState<number | null>(null)
+  const [showPlan, setShowPlan] = useState(false)
 
   const grade = (s: number) => {
     if (graded !== null) return
@@ -194,11 +329,22 @@ function ShortBody({ q, onDone }: { q: ShortAnswer; onDone: (s: number) => void 
 
   return (
     <div>
+      {q.essay && q.plan && !revealed && (
+        <div className="mb-3">
+          {showPlan ? (
+            <EssayPlan plan={q.plan} />
+          ) : (
+            <button type="button" onClick={() => setShowPlan(true)} className="text-sm font-medium text-violet-700 underline">
+              Show me a plan before I write
+            </button>
+          )}
+        </div>
+      )}
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         disabled={revealed}
-        rows={4}
+        rows={q.essay ? 12 : 4}
         placeholder={q.ownWords ? 'Explain it in your own words, as if teaching a friend...' : 'Type your answer...'}
         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-[15px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-slate-50"
       />

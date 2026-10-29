@@ -6,7 +6,7 @@ export const lawLessons: LessonIn[] = [
     id: 'defamation',
     unit: 'law',
     title: 'Defamation: libel vs slander',
-    priority: 'high',
+    priority: 'medium',
     minutes: 10,
     sources: ['Media Law for EC (slides, Week 4)', '7.1 Bovée & Thill Ch. 1 (legal communication: defamation)'],
     what:
@@ -136,7 +136,7 @@ export const lawLessons: LessonIn[] = [
     id: 'libel-defenses',
     unit: 'law',
     title: 'Defending against libel: truth, privilege, fair comment',
-    priority: 'high',
+    priority: 'medium',
     minutes: 12,
     sources: ['Media Law for EC (slides): Missouri Group, News Reporting and Writing; Cornell LII "Fair comment"; Ken Paulson'],
     what:
@@ -274,7 +274,7 @@ export const lawLessons: LessonIn[] = [
     id: 'privacy-copyright',
     unit: 'law',
     title: 'Invasion of privacy, copyright & fair use',
-    priority: 'high',
+    priority: 'medium',
     minutes: 10,
     sources: ['Media Law for EC (slides)', '7.1 Bovée & Thill Ch. 1 (copyright, fair use, intellectual property)'],
     what:

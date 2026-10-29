@@ -81,6 +81,7 @@ export function Sidebar({ api, path }: { api: ProgressApi; path: string }) {
 
       <nav className="flex flex-col gap-0.5">
         {navItem('#/', 'Start here: plan & roadmap', '/')}
+        {navItem('#/essays', 'Essay prep (highlighted texts)', '/essays')}
         {navItem('#/revision', 'Quick revision', '/revision')}
         {navItem('#/mock', 'Mock midterm', '/mock')}
       </nav>

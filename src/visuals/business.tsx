@@ -278,6 +278,15 @@ export function EthicsMap() {
       <Box tone="slate" title="Code of ethics: Apple's Business Conduct Policy (sample in your materials)">
         Principles: <b>Honesty</b> · <b>Respect</b> · <b>Confidentiality</b> · <b>Compliance</b>. Employees must speak up about violations, Apple promises <b>no retaliation</b>, and there are annual training and a helpline.
       </Box>
+      <Cards
+        cols={4}
+        items={[
+          { title: 'Bribe', body: 'Offering/giving **anything of value** (cash, gift cards, gifts, meals, travel) to get or keep business or an **improper advantage**. Public or private.', tone: 'violet', tag: 'highlighted' },
+          { title: 'Kickback', body: 'A type of bribery: something of value in exchange for giving **information, a discount or a favor** to a third party.', tone: 'violet', tag: 'highlighted' },
+          { title: 'Facilitating payment', body: 'A type of bribe used to **speed up routine, non-discretionary government action**.', tone: 'violet', tag: 'highlighted' },
+          { title: 'Money laundering', body: 'Trying to **conceal illicit funds** or make them look legitimate.', tone: 'violet', tag: 'highlighted' },
+        ]}
+      />
     </div>
   )
 }

@@ -6,7 +6,7 @@ export const newsLessons: LessonIn[] = [
     id: 'news-values',
     unit: 'news',
     title: 'What makes news: criteria & 8 elements',
-    priority: 'high',
+    priority: 'medium',
     minutes: 10,
     sources: ['5.1 Nature of News (slides; The Missouri Group, News Reporting and Writing)', '6.5 "Murder hornets" (National Geographic) as a sample story'],
     what:
@@ -136,7 +136,7 @@ export const newsLessons: LessonIn[] = [
     id: 'inverted-pyramid',
     unit: 'news',
     title: 'The inverted pyramid & news-writing checklist',
-    priority: 'high',
+    priority: 'medium',
     minutes: 10,
     sources: ['5.2 Inverted Pyramid Checklist (jprof.com)'],
     what:
@@ -271,7 +271,7 @@ export const newsLessons: LessonIn[] = [
     id: 'lead-types',
     unit: 'news',
     title: 'Types of news leads',
-    priority: 'high',
+    priority: 'medium',
     minutes: 14,
     sources: ['6.1 Other Types of Leads (slides, Prof. Annette Taylor, University of Dayton)'],
     what:
@@ -428,7 +428,7 @@ export const newsLessons: LessonIn[] = [
     id: 'feature-leads',
     unit: 'news',
     title: 'Feature leads, nutgrafs & bookends',
-    priority: 'medium',
+    priority: 'high',
     minutes: 10,
     sources: ['6.2 "Where to Begin: The First 100 Words" (Sumner & Miller, Feature and Magazine Writing)'],
     what:
@@ -573,7 +573,7 @@ export const newsLessons: LessonIn[] = [
     id: 'ideas-angles',
     unit: 'news',
     title: 'Finding an original idea & a tight angle',
-    priority: 'medium',
+    priority: 'high',
     minutes: 8,
     sources: ['6.3 How to Find an Original Idea (Sidebar 2.2)', '6.4 How to Give a Tighter Angle to a Broad Topic (Sidebar 3.1, Figures 3.1–3.2)'],
     what:

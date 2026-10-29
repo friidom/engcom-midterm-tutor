@@ -30,11 +30,20 @@ export interface KeyPoint {
 export interface ShortAnswer extends QuestionBase {
   kind: 'short'
   ownWords?: boolean
+  essay?: boolean
+  plan?: string[]
   keyPoints: KeyPoint[]
   model: string
 }
 
-export type Question = MCQ | TrueFalse | ShortAnswer
+export interface FillIn extends QuestionBase {
+  kind: 'fill'
+  // Each "___" in the prompt is one blank; blanks[i] lists the accepted answers for it.
+  blanks: string[][]
+  explain: string
+}
+
+export type Question = MCQ | TrueFalse | ShortAnswer | FillIn
 
 export interface Visual {
   title: string

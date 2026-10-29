@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { lessons, orderedLessons, units } from '../content'
+import { essayLessons } from '../content/essays'
 import type { ProgressApi } from '../progress'
 import type { Navigate } from '../App'
 import type { Lesson } from '../types'
@@ -58,6 +59,12 @@ export function LessonPage({ lesson, api, navigate }: { lesson: Lesson; api: Pro
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{lesson.title}</h1>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-600">
           <PriorityBadge p={lesson.priority} />
+          {essayLessons.has(lesson.id) && (
+            <a href="#/essays" className="rounded bg-violet-100 px-1.5 py-0.5 text-[11px] font-semibold text-violet-800 hover:bg-violet-200">
+              Essay source: highlighted in your lecture file →
+            </a>
+          )}
+          {(lesson.unit === 'business' || lesson.unit === 'people') && <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-800">Week 7 · fill-in focus</span>}
           <span>≈ {lesson.minutes} min</span>
           {isDone && <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-800">Completed</span>}
         </div>

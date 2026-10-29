@@ -7,6 +7,7 @@ import { LessonPage } from './pages/LessonPage'
 import { Revision } from './pages/Revision'
 import { MockExam } from './pages/MockExam'
 import { WeakPractice } from './pages/WeakPractice'
+import { Essays } from './pages/Essays'
 
 export type Navigate = (path: string) => void
 
@@ -41,6 +42,7 @@ export function App() {
   if (lesson) page = <LessonPage key={lesson.id} lesson={lesson} api={api} navigate={navigate} />
   else if (route === '/revision') page = <Revision navigate={navigate} />
   else if (route === '/mock') page = <MockExam api={api} navigate={navigate} />
+  else if (route === '/essays') page = <Essays api={api} />
   else if (route === '/practice') page = <WeakPractice key={query} query={query} api={api} navigate={navigate} />
   else page = <Home api={api} navigate={navigate} />
 

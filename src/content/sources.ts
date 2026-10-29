@@ -6,7 +6,7 @@ export const sourcesLessons: LessonIn[] = [
     id: 'plagiarism',
     unit: 'sources',
     title: 'Plagiarism & unacceptable paraphrasing',
-    priority: 'high',
+    priority: 'medium',
     minutes: 10,
     sources: ['1.1 Unacceptable Paraphrasing (slides)', '1.2 Harvard Tutorial on Paraphrasing', '7.1 Bovée & Thill Ch. 1 (Plagiarizing)'],
     what:
@@ -169,7 +169,7 @@ export const sourcesLessons: LessonIn[] = [
     id: 'spq-rules',
     unit: 'sources',
     title: 'Quote, summarize, paraphrase: the rules',
-    priority: 'high',
+    priority: 'medium',
     minutes: 12,
     sources: ['1.2 Harvard Tutorial on Paraphrasing (Module 2)', '1.3 Sample for SPQ Assignment', '2.3 Paraphrase drill examples'],
     what:
@@ -326,7 +326,7 @@ export const sourcesLessons: LessonIn[] = [
     id: 'paraphrase-method',
     unit: 'sources',
     title: 'How to paraphrase: the 4 Rs and safe note-taking',
-    priority: 'high',
+    priority: 'medium',
     minutes: 10,
     sources: ['1.2 Harvard Tutorial (Module 3)', '1.3 Sample for SPQ Assignment', '2.3 Paraphrase drill examples', 'Week 3 Economist issue (practice reading)'],
     what:
@@ -462,7 +462,7 @@ export const sourcesLessons: LessonIn[] = [
     id: 'quotation-marks',
     unit: 'sources',
     title: 'Quotation marks & punctuation',
-    priority: 'high',
+    priority: 'medium',
     minutes: 10,
     sources: ['Quotation Marks for Class Drilling (SJSU Writing Center, Week 3)'],
     what:

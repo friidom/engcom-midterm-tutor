@@ -20,7 +20,7 @@ export const peopleLessons: LessonIn[] = [
     id: 'teams',
     unit: 'people',
     title: 'Teams, Tuckman\'s stages & resolving conflict',
-    priority: 'medium',
+    priority: 'high',
     minutes: 12,
     sources: ['7.5 Bovée & Thill Ch. 2 "Collaboration, Interpersonal Communication, and Business Etiquette" (LO 1, Fig 2.1, Table 2.1)'],
     what:
@@ -219,7 +219,7 @@ export const peopleLessons: LessonIn[] = [
     id: 'meetings',
     unit: 'people',
     title: 'Productive meetings & meeting minutes',
-    priority: 'medium',
+    priority: 'high',
     minutes: 10,
     sources: ['7.5 Bovée & Thill Ch. 2 (LO 3, Figs 2.4–2.9, Checklist)', '7.6 "How to Write Meeting Minutes" & 7.7 "Simple Way to Take Meeting Notes at Work" (videos, not transcribed here)'],
     what:
@@ -329,7 +329,7 @@ export const peopleLessons: LessonIn[] = [
     id: 'listening',
     unit: 'people',
     title: 'Listening: styles, barriers & active listening',
-    priority: 'medium',
+    priority: 'high',
     minutes: 10,
     sources: ['7.5 Bovée & Thill Ch. 2 (LO 4, Tables 2.3–2.6, Checklist)'],
     what:
@@ -423,7 +423,7 @@ export const peopleLessons: LessonIn[] = [
     id: 'nonverbal-etiquette',
     unit: 'people',
     title: 'Nonverbal communication & business etiquette',
-    priority: 'medium',
+    priority: 'high',
     minutes: 10,
     sources: ['7.5 Bovée & Thill Ch. 2 (LO 5–6, Figs 2.10–2.12)'],
     what:
@@ -535,7 +535,7 @@ export const peopleLessons: LessonIn[] = [
     id: 'intercultural',
     unit: 'people',
     title: 'Communicating across cultures',
-    priority: 'medium',
+    priority: 'high',
     minutes: 12,
     sources: ['7.8.1 Bovée & Thill Ch. 3 "Communication Challenges in a Diverse, Global Marketplace" (Figs 3.1–3.5)', '7.9 "How Cultural Differences Affect Business" (video, not transcribed here)'],
     what:
@@ -669,7 +669,7 @@ export const peopleLessons: LessonIn[] = [
     id: 'gaslighting',
     unit: 'people',
     title: 'Gaslighting: recognizing manipulation',
-    priority: 'medium',
+    priority: 'high',
     minutes: 6,
     sources: ['7.10 "What Is Gaslighting? Meaning and Examples" (WA Government)', 'Gaslighting folder: 3 videos (not transcribed here)'],
     what:

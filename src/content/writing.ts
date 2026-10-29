@@ -6,7 +6,7 @@ export const writingLessons: LessonIn[] = [
     id: 'sentence-patterns',
     unit: 'writing',
     title: 'Sentence patterns: the building blocks',
-    priority: 'high',
+    priority: 'medium',
     minutes: 12,
     sources: ['2.1 Sentence Patterns (slides, Purdue OWL)', '5.2 Inverted Pyramid Checklist (comma splices)', '7.3 Locker "Polishing Your Prose: Sentence Fragments"'],
     what:
@@ -163,7 +163,7 @@ export const writingLessons: LessonIn[] = [
     id: 'paragraph-patterns',
     unit: 'writing',
     title: 'Paragraph patterns (9 types)',
-    priority: 'high',
+    priority: 'medium',
     minutes: 10,
     sources: ['2.2 Paragraph Development (slides; Langan & Albright, Exploring Writing)'],
     what:

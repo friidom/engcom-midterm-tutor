@@ -6,6 +6,7 @@ import { lawLessons } from './law'
 import { newsLessons } from './news'
 import { businessLessons } from './business'
 import { peopleLessons } from './people'
+import { lessonFills } from './fills'
 import type { Order } from '../progress'
 
 export const units: Unit[] = [
@@ -17,7 +18,9 @@ export const units: Unit[] = [
   { id: 'people', title: 'Working with people', weeks: 'Week 7' },
 ]
 
-export const lessons: Lesson[] = [...sourcesLessons, ...writingLessons, ...lawLessons, ...newsLessons, ...businessLessons, ...peopleLessons].map(finalizeLesson)
+export const lessons: Lesson[] = [...sourcesLessons, ...writingLessons, ...lawLessons, ...newsLessons, ...businessLessons, ...peopleLessons]
+  .map((l) => ({ ...l, questions: [...l.questions, ...(lessonFills[l.id] ?? [])] }))
+  .map(finalizeLesson)
 
 export const lessonById: Record<string, Lesson> = Object.fromEntries(lessons.map((l) => [l.id, l]))
 
