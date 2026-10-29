@@ -1,0 +1,8 @@
+node_modules
+dist
+*.tsbuildinfo
+.playwright-mcp
+.claude
+
+# Course materials: too large for GitHub and copyrighted, keep them local only
+*.zip
